@@ -1,6 +1,9 @@
 package com.example.awsdemo.controllers;
 
+import com.example.awsdemo.model.FileMetadata;
+import com.example.awsdemo.repository.FileMetadataRepository;
 import com.example.awsdemo.service.S3Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,6 +20,9 @@ import java.util.List;
 public class FileController {
 
     private final S3Service s3Service;
+
+    @Autowired
+    private FileMetadataRepository repository;
 
     public FileController(S3Service s3Service) {
         this.s3Service = s3Service;
@@ -47,5 +53,30 @@ public class FileController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(data);
     }
+
+    @GetMapping("/secure-download")
+    public ResponseEntity<String> getSecureDownloadLink(@RequestParam String file) {
+        String presignedUrl = s3Service.generatePresignedUrl(file);
+        return ResponseEntity.ok(presignedUrl);
+    }
+
+
+    @GetMapping("/upload-history")
+    public List<FileMetadata> getUploads() {
+        return repository.findAll();
+    }
+
+    @PostMapping("/uploadDB")
+    public ResponseEntity<String> uploadFileDB(@RequestParam("file") MultipartFile file) {
+        try {
+            String response = s3Service.uploadFileDB(file);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+
 
 }
